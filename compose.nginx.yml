@@ -1,0 +1,39 @@
+# =============================================================================
+# Local deployment override: run UniSSH behind the existing `nginx` container
+# (which terminates TLS for ttllkk-new.zapto.org) instead of the bundled Caddy
+# taking ports 80/443.
+#
+#   client ──TLS──► nginx ──┬─ /v1/ /healthz /readyz ──► unissh-server:8443
+#                           └─ everything else (SPA) ──► unissh-caddy:80
+#
+# Nothing is host-published. Both services join nginx's docker network
+# (elliot_default) under unambiguous aliases so nginx can reach them by name.
+# The API goes straight to the server (one hop) so it sees real client IPs for
+# per-IP rate limiting; Caddy is kept only to serve the admin SPA, which ships
+# inside its image and so stays in step with the server on upgrades.
+#
+# Selected automatically via COMPOSE_FILE in .env — just `docker compose up -d`.
+# =============================================================================
+
+services:
+  caddy:
+    environment:
+      # ":80" = plain HTTP, no ACME. TLS is nginx's job.
+      UNISSH_DOMAIN: ":80"
+      UNISSH_TLS_DIRECTIVE: ""
+    ports: !reset []
+    networks:
+      unissh:
+      proxy:
+        aliases: [unissh-caddy]
+
+  server:
+    networks:
+      unissh:
+      proxy:
+        aliases: [unissh-server]
+
+networks:
+  proxy:
+    name: elliot_default
+    external: true
