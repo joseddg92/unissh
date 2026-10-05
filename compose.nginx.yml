@@ -17,6 +17,11 @@
 
 services:
   caddy:
+    # Upstream panel image patched to default to English (see the Dockerfile).
+    build:
+      context: deploy
+      dockerfile: Caddy-en.Dockerfile
+    image: unissh-caddy-en:latest
     environment:
       # ":80" = plain HTTP, no ACME. TLS is nginx's job.
       UNISSH_DOMAIN: ":80"
